@@ -7,10 +7,10 @@ Created on Sun Nov  7 14:11:39 2021
 """
 
 python train_mpii.py \
-    --arch=hg2 \
+    --arch=hg1 \
     --image-path=/home/jameel.hassan/Documents/CV701/Assignment4/mine/data/MPII/mpii_human_pose_v1/images/ \
-    --checkpoint=checkpoint/hg_base_perceptual_LR$1_$2 \
-    --epochs=30 \
+    --checkpoint=checkpoint/hg1_LR$1 \
+    --epochs=20 \
     --train-batch=24 \
     --workers=24 \
     --test-batch=32 \

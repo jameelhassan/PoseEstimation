@@ -188,8 +188,8 @@ class HourglassNet(nn.Module):
 
         for i in range(self.num_stacks):
             y = self.hg[i](x)
-            perceptual = self.hg[i]._perceptuals    # Get perceptual
-            perceptuals.append(perceptual)
+            # perceptual = self.hg[i]._perceptuals    # Get perceptual
+            # perceptuals.append(perceptual)
             y = self.res[i](y)
             y = self.fc[i](y)
             score = self.score[i](y)    #Heatmap prediction
@@ -204,7 +204,7 @@ class HourglassNet(nn.Module):
                 else:
                     x = x + fc_ + score_
 
-        return out, perceptuals
+        return out
 
 
 def hg(**kwargs):
@@ -230,6 +230,11 @@ def hg1(pretrained=False, progress=True, num_blocks=1, num_classes=16):
 def hg2(pretrained=False, progress=True, num_blocks=1, num_classes=16, separable=False):
     return _hg('hg2', pretrained, progress, num_stacks=2, num_blocks=num_blocks,
                num_classes=num_classes, separable=separable)
+
+
+def hg3(pretrained=False, progress=True, num_blocks=1, num_classes=16, separable=False):
+    return _hg('hg3', pretrained, progress, num_stacks=3, num_blocks=num_blocks,
+               num_classes=num_classes)
 
 
 def hg8(pretrained=False, progress=True, num_blocks=1, num_classes=16):
