@@ -14,8 +14,11 @@ def do_training_step(model, optimiser, input, target, data_info, target_weight=N
 
     with torch.enable_grad():
         # Forward pass and loss calculation.
-        output = model(input)
-        loss = sum(joints_mse_loss(o, target, target_weight) for o in output)
+        output, perceptuals = model(input)
+        # loss = sum(joints_mse_loss(o, target, target_weight) for o in output)
+        loss_preds = sum(joints_mse_loss(o, target, target_weight) for o in output)
+        loss_perceptuals = torch.nn.functional.mse_loss(perceptuals[0], perceptuals[1])
+        loss = loss_preds + loss_perceptuals
 
         # Backward pass and parameter update.
         optimiser.zero_grad()

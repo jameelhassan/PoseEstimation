@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from stacked_hourglass import hg1, hg2, hg8
 from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_validation_epoch
+from time import time
 
 
 def main(args):
@@ -53,7 +54,14 @@ def main(args):
                             num_workers=args.workers, pin_memory=True)
 
     # Generate predictions for the validation set.
+    val_st = time()
     _, _, predictions = do_validation_epoch(val_loader, model, device, Mpii.DATA_INFO, args.flip)
+    val_end = time()
+    hours_val, rem_val = divmod(val_end - val_st, 3600)
+    mins_val, secs_val = divmod(rem_val, 60)
+    inference_time = (val_end - val_st)/len(val_loader.dataset)
+    print(f"\nValidation time for {len(val_loader.dataset)} images - {int(hours_val):0>2}:{int(mins_val):0>2}:{int(secs_val):05.2f}")
+    print(f"Inference time per image - {inference_time:.2f}s")
 
     # Report PCKh for the predictions.
     print('\nFinal validation PCKh scores:\n')

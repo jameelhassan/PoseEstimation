@@ -7,9 +7,16 @@ from torch.nn import DataParallel
 from torch.optim.rmsprop import RMSprop
 from torch.utils.data import DataLoader
 from tqdm import trange, tqdm
+from time import time
+from config import INPLANES, NUM_FEATS, MODEL_TAG, GHOST
 
-from stacked_hourglass import hg1, hg2, hg8
-from stacked_hourglass.datasets.mpii import Mpii
+if GHOST:
+    from stacked_hourglass.ghostnet import hg1, hg2, hg8
+    from stacked_hourglass.predictor import HumanPosePredictor
+else:
+    from stacked_hourglass import hg1, hg2, hg8
+
+from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_training_epoch, do_validation_epoch
 from stacked_hourglass.utils.logger import Logger
 from stacked_hourglass.utils.misc import save_checkpoint, adjust_learning_rate
@@ -38,7 +45,8 @@ def main(args):
     else:
         raise Exception('unrecognised model architecture: ' + args.arch)
 
-    print(f"Number of parameters {sum(p.numel() for p in  model.parameters())}")
+    num_of_params = sum(p.numel() for p in  model.parameters())
+    print(f"Number of parameters {num_of_params}")
     model = DataParallel(model).to(device)
 
     optimizer = RMSprop(model.parameters(), lr=args.lr, momentum=args.momentum,
@@ -79,6 +87,8 @@ def main(args):
 
     # train and eval
     lr = args.lr
+    logfile = os.path.join(args.checkpoint, 'log.txt')
+    start = time()
     for epoch in trange(args.start_epoch, args.epochs, desc='Overall', ascii=True):
         lr = adjust_learning_rate(optimizer, epoch, lr, args.schedule, args.gamma)
 
@@ -111,7 +121,45 @@ def main(args):
             'best_acc': best_acc,
             'optimizer' : optimizer.state_dict(),
         }, predictions, is_best, checkpoint=args.checkpoint, snapshot=args.snapshot)
+        if (epoch + 1) == 20:
+            h20, rem20 = divmod(time() - start, 3600)
+            min20, sec20 = divmod(rem20, 60)
 
+    end = time()
+    hours, rem = divmod(end - start, 3600)
+    mins, secs = divmod(rem, 60)
+
+    ## Run evaluation of model
+    # Disable gradient calculations.
+    torch.set_grad_enabled(False)
+
+    # Initialise the MPII validation set dataloader.
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.test_batch, shuffle=False,
+        num_workers=args.workers, pin_memory=True
+    )
+
+    # Generate predictions for the validation set.
+    val_st = time()
+    _, _, predictions = do_validation_epoch(val_loader, model, device, Mpii.DATA_INFO)
+    val_end = time()
+    hours_val, rem_val = divmod(val_end - val_st, 3600)
+    mins_val, secs_val = divmod(rem_val, 60)
+    inference_time = (val_end - val_st)/len(val_loader.dataset)
+
+    # Report PCKh for the predictions.
+    print('\nFinal validation PCKh scores:\n')
+    full_table = print_mpii_validation_accuracy(predictions)
+
+    with open(logfile, 'a') as f:
+        f.write(f"\nTraining time for 20 epochs- {int(h20):0>2}:{int(min20):0>2}:{int(sec20):05.2f}\n")
+        f.write(f"\nTraining time - {int(hours):0>2}:{int(mins):0>2}:{int(secs):05.2f}\n")
+        f.write(f"Number of parameters - {num_of_params}\n")
+        f.write(f"Model tag - {MODEL_TAG}\n") if MODEL_TAG else None
+        f.write(f"Validation time for {len(val_loader.dataset)} images - {int(hours_val):0>2}:{int(mins_val):0>2}:{int(secs_val):05.2f}\n")
+        f.write(f"\nInference time per image - {inference_time:.2f}s\n")
+        f.write(full_table)
     logger.close()
 
 
@@ -128,9 +176,9 @@ if __name__ == '__main__':
     # Training strategy
     parser.add_argument('--input_shape', default=(256, 256), type=int, nargs='+',
                         help='Input shape of the model. Given as: (H, W)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=24, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=100, type=int, metavar='N',
+    parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
@@ -149,7 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.1,
                         help='LR is multiplied by gamma on schedule.')
     # Miscs
-    parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
+    parser.add_argument('-c', '--checkpoint', default='checkpoint/hg_rand', type=str, metavar='PATH',
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--snapshot', default=0, type=int,
                         help='save models for every #snapshot epochs (default: 0)')

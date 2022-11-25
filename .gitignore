@@ -1,1 +1,4 @@
 checkpoint/*
+stacked_hourglass/utils/__pycache__/*
+stacked_hourglass/res/__pycache__/*
+stacked_hourglass/__pycache__/*

@@ -189,9 +189,12 @@ def print_mpii_validation_accuracy(preds):
     rank = joint_names.index('right_ankle')
     rhip = joint_names.index('right_hip')
 
-    print(tabulate([
+    full_table = tabulate([
         ['Head', 'Shoulder', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Mean'],
         [PCKh[head], 0.5 * (PCKh[lsho] + PCKh[rsho]), 0.5 * (PCKh[lelb] + PCKh[relb]),
         0.5 * (PCKh[lwri] + PCKh[rwri]), 0.5 * (PCKh[lhip] + PCKh[rhip]),
         0.5 * (PCKh[lkne] + PCKh[rkne]), 0.5 * (PCKh[lank] + PCKh[rank]), np.mean(PCKh)]
-    ], headers='firstrow', floatfmt='0.2f'))
+    ], headers='firstrow', floatfmt='0.2f')
+    
+    print(full_table)
+    return full_table
