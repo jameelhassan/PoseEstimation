@@ -6,6 +6,7 @@ from tqdm import tqdm
 from stacked_hourglass.loss import joints_mse_loss
 from stacked_hourglass.utils.evaluation import accuracy, AverageMeter, final_preds
 from stacked_hourglass.utils.transforms import fliplr, flip_back
+from config import LOSS_WEIGHT as alpha
 
 
 def do_training_step(model, optimiser, input, target, data_info, target_weight=None):
@@ -17,7 +18,7 @@ def do_training_step(model, optimiser, input, target, data_info, target_weight=N
         output, perceptuals = model(input)
         loss_preds = sum(joints_mse_loss(o, target, target_weight) for o in output)
         loss_perceptuals = torch.nn.functional.mse_loss(perceptuals[0], perceptuals[1])
-        loss = loss_preds + loss_perceptuals
+        loss = 2*(alpha * loss_preds + (1 - alpha) * loss_perceptuals)
 
         # Backward pass and parameter update.
         optimiser.zero_grad()
