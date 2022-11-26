@@ -16,8 +16,8 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-print("""---------------- [ERROR] CANT RUN HERE!!!!!!! -----------------
-GFLOP test wont work in main branch due to perceptual loss. Switch to branch hg1-3 and run it""")
+print("""---------------- [ERROR] CANT RUN PERCEPTUALS HERE!!!!!!! -----------------
+GFLOP test wont work due to perceptual loss. Need to remove two outputs being returned""")
 
 arch = "hg2"
 if arch == 'hg1':
