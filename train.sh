@@ -7,9 +7,9 @@ Created on Sun Nov  7 14:11:39 2021
 """
 
 python train_mpii.py \
-    --arch=hg1 \
+    --arch=hg3 \
     --image-path=/home/jameel.hassan/Documents/CV701/Assignment4/mine/data/MPII/mpii_human_pose_v1/images/ \
-    --checkpoint=checkpoint/hg1_LR$1 \
+    --checkpoint=checkpoint/hg3_Bottleneck32-64_LR$1 \
     --epochs=20 \
     --train-batch=24 \
     --workers=24 \

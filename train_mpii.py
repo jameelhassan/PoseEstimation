@@ -11,7 +11,7 @@ from time import time
 from config import INPLANES, NUM_FEATS, MODEL_TAG, GHOST
 
 if GHOST:
-    from stacked_hourglass.ghostnet import hg1, hg2,hg8
+    from stacked_hourglass.ghostnet import hg1, hg2, hg8
     from stacked_hourglass.predictor import HumanPosePredictor
 else:
     from stacked_hourglass import hg1, hg2, hg3, hg8
