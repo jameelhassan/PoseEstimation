@@ -122,6 +122,13 @@ def main(args):
             'optimizer' : optimizer.state_dict(),
         }, predictions, is_best, checkpoint=args.checkpoint, snapshot=args.snapshot)
         if (epoch + 1) == 20:
+            save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': args.arch,
+            'state_dict': model.state_dict(),
+            'best_acc': best_acc,
+            'optimizer' : optimizer.state_dict(),
+        }, predictions, is_best, checkpoint=args.checkpoint, filename="epoch20.pth.tar")
             h20, rem20 = divmod(time() - start, 3600)
             min20, sec20 = divmod(rem20, 60)
 

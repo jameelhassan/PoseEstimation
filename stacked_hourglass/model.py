@@ -72,6 +72,7 @@ class Hourglass(nn.Module):
         self.block = block
         self.hg = self._make_hour_glass(block, num_blocks, planes, depth)
         self._perceptuals = None
+        self._percept_loss = None
 
     def _make_residual(self, block, num_blocks, planes):
         layers = []
@@ -99,10 +100,11 @@ class Hourglass(nn.Module):
             low2 = self._hour_glass_forward(n-1, low1, perceptual=perceptual)
         else:
             low2 = self.hg[n-1][3](low1)    # For narrowest layer
-            # Skip connection from previous hourglass perceptual
+            self._percept_loss = low2   # perceptual at narrowest point for perceptual loss, before res connection addition
+
             if perceptual is not None:
-                low2 += perceptual
-            self._perceptuals = low2
+                low2 += perceptual  # Skip connection from previous hourglass perceptual
+            self._perceptuals = low2    # perceptual at narrowest point for next
             
         low3 = self.hg[n-1][2](low2)    # RES block in upsample path
         up2 = F.interpolate(low3, scale_factor=2)
@@ -180,7 +182,7 @@ class HourglassNet(nn.Module):
 
     def forward(self, x):
         out = []
-        perceptuals = []
+        loss_perceptuals = []
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -197,7 +199,7 @@ class HourglassNet(nn.Module):
             else:
                 y = self.hg[i](x)
             perceptual = self.hg[i]._perceptuals    # Get perceptual
-            perceptuals.append(perceptual)
+            loss_perceptuals.append(self.hg[i]._percept_loss)    # Get perceptual for loss
             y = self.res[i](y)
             y = self.fc[i](y)
             score = self.score[i](y)    #Heatmap prediction
@@ -213,7 +215,7 @@ class HourglassNet(nn.Module):
                     x = x + fc_ + score_
         
         if PERCEPTUAL_LOSS:
-            return out, perceptuals
+            return out, loss_perceptuals
         else:
             return out
 

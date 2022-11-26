@@ -7,8 +7,8 @@ GHOST = False
 CONCAT = True
 PERCEPTUAL_RES = True   # Skip connection from narrowest hourglass point ie: perceptual
 PERCEPTUAL_LOSS = True # Perceptual loss between perceptuals of hourglass
-PERCEPTUAL_SCALE = 5    # Weighing Scale of perceptual loss
-LOSS_WEIGHT = 0.8       # Weight for prediction loss when including perceptual loss
+PERCEPTUAL_SCALE = 3    # Weighing Scale of perceptual loss
+LOSS_WEIGHT = 0.7       # Weight for prediction loss when including perceptual loss
 
 if SEPARABLE_ALL:
     MODEL_TAG = f'Separable convolution at all of Bottlenecks {INPLANES}-{NUM_FEATS} filters, expansion {EXPANSION}, perceptual loss|Res: {PERCEPTUAL_LOSS}|{PERCEPTUAL_RES}'
