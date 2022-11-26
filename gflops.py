@@ -34,4 +34,3 @@ inp = torch.rand(1,3,256,256).to(device)
 
 # Count the number of FLOPs
 count_ops(model, inp)
-

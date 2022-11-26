@@ -1,5 +1,5 @@
-INPLANES = 64   #Edit from 64
-NUM_FEATS = 128  #Edit from 128
+INPLANES = 24   #Edit from 64
+NUM_FEATS = 48  #Edit from 128
 EXPANSION = 2
 SEPARABLE_ALL = False
 SEPARABLE_3x3 = False
@@ -18,3 +18,5 @@ elif CONCAT:
     MODEL_TAG = f"Output concatenation with {INPLANES}-{NUM_FEATS} filters, expansion {EXPANSION}"
 else:
     MODEL_TAG = None
+
+print(MODEL_TAG)
