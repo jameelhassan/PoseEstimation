@@ -5,7 +5,7 @@ SEPARABLE_ALL = False
 SEPARABLE_3x3 = False
 GHOST = False
 CONCAT = False
-LOSS_WEIGHT = 0.7
+LOSS_WEIGHT = 0.8
 
 if SEPARABLE_ALL:
     MODEL_TAG = f'Separable convolution at all of Bottlenecks {INPLANES}-{NUM_FEATS} filters, expansion {EXPANSION}'

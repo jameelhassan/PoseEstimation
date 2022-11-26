@@ -18,7 +18,7 @@ def do_training_step(model, optimiser, input, target, data_info, target_weight=N
         output, perceptuals = model(input)
         loss_preds = sum(joints_mse_loss(o, target, target_weight) for o in output)
         loss_perceptuals = torch.nn.functional.mse_loss(perceptuals[0], perceptuals[1])
-        loss = 2*(alpha * loss_preds + (1 - alpha) * loss_perceptuals)
+        loss = 5 * (alpha * loss_preds + (1 - alpha) * loss_perceptuals)
 
         # Backward pass and parameter update.
         optimiser.zero_grad()
@@ -71,7 +71,7 @@ def do_validation_step(model, input, target, data_info, target_weight=None, flip
     output, perceptuals = model(input)
     loss_preds = sum(joints_mse_loss(o, target, target_weight) for o in output)
     loss_perceptuals = torch.nn.functional.mse_loss(perceptuals[0], perceptuals[1])
-    loss = loss_preds + loss_perceptuals
+    loss = 5 * (alpha * loss_preds + (1 - alpha) * loss_perceptuals)
     
 
     # Get the heatmaps.
