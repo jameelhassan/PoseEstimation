@@ -6,7 +6,7 @@ import torch.backends.cudnn
 from torch.nn import DataParallel
 from torch.utils.data import DataLoader
 
-from stacked_hourglass import hg1, hg2, hg8
+from stacked_hourglass import hg1, hg2, hg3, hg8
 from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_validation_epoch
 from time import time
@@ -33,6 +33,8 @@ def main(args):
         model = hg1(pretrained=pretrained)
     elif args.arch == 'hg2':
         model = hg2(pretrained=pretrained)
+    elif args.arch == 'hg3':
+        model = hg3(pretrained=pretrained)
     elif args.arch == 'hg8':
         model = hg8(pretrained=pretrained)
     else:
@@ -55,7 +57,7 @@ def main(args):
 
     # Generate predictions for the validation set.
     val_st = time()
-    _, _, predictions = do_validation_epoch(val_loader, model, device, Mpii.DATA_INFO, args.flip)
+    _, _, predictions = do_validation_epoch(val_loader, model, device, Mpii.DATA_INFO, False)
     val_end = time()
     hours_val, rem_val = divmod(val_end - val_st, 3600)
     mins_val, secs_val = divmod(rem_val, 60)
@@ -73,7 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('--image-path', required=True, type=str,
                         help='path to MPII Human Pose images')
     parser.add_argument('--arch', metavar='ARCH', default='hg1',
-                        choices=['hg1', 'hg2', 'hg8'],
+                        choices=['hg1', 'hg2', 'hg3', 'hg8'],
                         help='model architecture')
     parser.add_argument('--model-file', default='', type=str, metavar='PATH',
                         help='path to saved model weights')
