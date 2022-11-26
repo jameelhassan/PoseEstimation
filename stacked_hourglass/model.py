@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
-from config import INPLANES, NUM_FEATS, EXPANSION, SEPARABLE_ALL, SEPARABLE_3x3, CONCAT
+from config import INPLANES, NUM_FEATS, EXPANSION, SEPARABLE_ALL, SEPARABLE_3x3, CONCAT, PERCEPTUAL_RES, PERCEPTUAL_LOSS
 
 
 __all__ = ['HourglassNet', 'hg']
@@ -72,6 +72,7 @@ class Hourglass(nn.Module):
         self.block = block
         self.hg = self._make_hour_glass(block, num_blocks, planes, depth)
         self._perceptuals = None
+        self._percept_loss = None
 
     def _make_residual(self, block, num_blocks, planes):
         layers = []
@@ -90,29 +91,34 @@ class Hourglass(nn.Module):
             hg.append(nn.ModuleList(res))
         return nn.ModuleList(hg)
 
-    def _hour_glass_forward(self, n, x):
+    def _hour_glass_forward(self, n, x, perceptual=None):
         up1 = self.hg[n-1][0](x)    # The RES connection
         low1 = F.max_pool2d(x, 2, stride=2) # Downsampling
         low1 = self.hg[n-1][1](low1)
 
         if n > 1:
-            low2 = self._hour_glass_forward(n-1, low1)
+            low2 = self._hour_glass_forward(n-1, low1, perceptual=perceptual)
         else:
             low2 = self.hg[n-1][3](low1)    # For narrowest layer
-            self._perceptuals = low2
+            self._percept_loss = low2   # perceptual at narrowest point for perceptual loss, before res connection addition
+
+            if perceptual is not None:
+                low2 += perceptual  # Skip connection from previous hourglass perceptual
+            self._perceptuals = low2    # perceptual at narrowest point for next
             
         low3 = self.hg[n-1][2](low2)    # RES block in upsample path
         up2 = F.interpolate(low3, scale_factor=2)
         out = up1 + up2
         return out
 
-    def forward(self, x):
-        return self._hour_glass_forward(self.depth, x)
+    def forward(self, x, perceptual=None):
+        return self._hour_glass_forward(self.depth, x, perceptual=perceptual)
 
 
 class HourglassNet(nn.Module):
     '''Hourglass model from Newell et al ECCV 2016'''
     concat = CONCAT
+    perceptualRes = PERCEPTUAL_RES
 
     def __init__(self, block, num_stacks=2, num_blocks=4, num_classes=16):
         super(HourglassNet, self).__init__()
@@ -176,7 +182,7 @@ class HourglassNet(nn.Module):
 
     def forward(self, x):
         out = []
-        perceptuals = []
+        loss_perceptuals = []
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -187,9 +193,13 @@ class HourglassNet(nn.Module):
         x = self.layer3(x)
 
         for i in range(self.num_stacks):
-            y = self.hg[i](x)
+            # Skip connection from perceptuals
+            if i > 0 and HourglassNet.perceptualRes:
+                y = self.hg[i](x, perceptual)
+            else:
+                y = self.hg[i](x)
             perceptual = self.hg[i]._perceptuals    # Get perceptual
-            perceptuals.append(perceptual)
+            loss_perceptuals.append(self.hg[i]._percept_loss)    # Get perceptual for loss
             y = self.res[i](y)
             y = self.fc[i](y)
             score = self.score[i](y)    #Heatmap prediction
@@ -203,8 +213,11 @@ class HourglassNet(nn.Module):
                     x = self.concat1(x)
                 else:
                     x = x + fc_ + score_
-
-        return out, perceptuals
+        
+        if PERCEPTUAL_LOSS:
+            return out, loss_perceptuals
+        else:
+            return out
 
 
 def hg(**kwargs):
