@@ -4,9 +4,11 @@ Use lr=0.01 for current version
 (c) YANG, Wei
 '''
 import torch
+from torch import cat
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
+import math
 from config import INPLANES, NUM_FEATS, EXPANSION, SEPARABLE_ALL, SEPARABLE_3x3, CONCAT, PERCEPTUAL_RES, PERCEPTUAL_LOSS
 
 
@@ -17,6 +19,145 @@ model_urls = {
     'hg2': 'https://github.com/anibali/pytorch-stacked-hourglass/releases/download/v0.0.0/bearpaw_hg2-15e342d9.pth',
     'hg8': 'https://github.com/anibali/pytorch-stacked-hourglass/releases/download/v0.0.0/bearpaw_hg8-90e5d470.pth',
 }
+
+
+class HardSwish(nn.Module):
+    def __init__(self, inplace=False):
+        super(HardSwish, self).__init__()
+        self.inplace = inplace
+
+    def forward(self, x):
+        return x * F.relu6(x + 3., inplace=self.inplace) / 6.
+
+
+class HardSigmoid(nn.Module):
+    def __init__(self, inplace=False):
+        super(HardSigmoid, self).__init__()
+        self.inplace = inplace
+
+    def forward(self, x):
+        return F.relu6(x + 3., inplace=self.inplace) / 6.
+
+
+class Activation(nn.Module):
+    def __init__(self, act_func):
+        super(Activation, self).__init__()
+        if act_func == "relu":
+            self.act = nn.ReLU()
+        elif act_func == "relu6":
+            self.act = nn.ReLU6()
+        elif act_func == "hard_sigmoid":
+            self.act = HardSigmoid()
+        elif act_func == "hard_swish":
+            self.act = HardSwish()
+        else:
+            raise NotImplementedError
+
+    def forward(self, x):
+        return self.act(x)
+
+
+def make_divisible(x, divisible_by=8):
+    return int(math.ceil(x * 1. / divisible_by) * divisible_by)
+
+
+class _BasicUnit(nn.Module):
+    def __init__(self, num_in, num_out, kernel_size=1, strides=1, pad=0, num_groups=1,
+                 use_act=True, act_type="relu", norm_layer=nn.BatchNorm2d):
+        super(_BasicUnit, self).__init__()
+        self.use_act = use_act
+        self.conv = nn.Conv2d(in_channels=num_in, out_channels=num_out,
+                              kernel_size=kernel_size, stride=strides,
+                              padding=pad, groups=num_groups, bias=False,
+                              )
+        self.bn = norm_layer(num_out)
+        if use_act is True:
+            self.act = Activation(act_type)
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.bn(out)
+        if self.use_act:
+            out = self.act(out)
+        return out
+
+
+class SE_Module(nn.Module):
+    def __init__(self, channels, reduction=4):
+        super(SE_Module, self).__init__()
+        reduction_c = make_divisible(channels // reduction)
+        self.out = nn.Sequential(
+            nn.Conv2d(channels, reduction_c, 1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(reduction_c, channels, 1, bias=True),
+            HardSigmoid()
+        )
+
+    def forward(self, x):
+        y = F.adaptive_avg_pool2d(x, 1)
+        y = self.out(y)
+        return x * y
+
+
+class AsymmBottleneck(nn.Module):
+    expansion = 2 
+
+    def __init__(self, num_in, num_mid, num_out, kernel_size, asymmrate=1,
+                 act_type="relu", use_se=False, strides=1,
+                 norm_layer=nn.BatchNorm2d):
+        super(AsymmBottleneck, self).__init__()
+        assert isinstance(asymmrate, int)
+        self.asymmrate = asymmrate
+        self.use_se = use_se
+        self.use_short_cut_conv = (num_in == num_out and strides == 1)
+        self.do_expand = (num_mid > max(num_in, asymmrate * num_in))
+        if self.do_expand:
+            self.expand = _BasicUnit(num_in, num_mid - asymmrate * num_in,
+                                     kernel_size=1,
+                                     strides=1, pad=0, act_type=act_type,
+                                     norm_layer=norm_layer)
+            num_mid += asymmrate * num_in
+        self.dw_conv = _BasicUnit(num_mid, num_mid, kernel_size, strides,
+                                  pad=self._get_pad(kernel_size), act_type=act_type,
+                                  num_groups=num_mid, norm_layer=norm_layer)
+        if self.use_se:
+            self.se = SE_Module(num_mid)
+        self.pw_conv_linear = _BasicUnit(num_mid, num_out, kernel_size=1, strides=1,
+                                         pad=0, act_type=act_type, use_act=False,
+                                         norm_layer=norm_layer, num_groups=1)
+
+    def forward(self, x):
+        if self.do_expand:
+            out = self.expand(x)
+            feat = []
+            for i in range(self.asymmrate):
+                feat.append(x)
+            feat.append(out)
+            for i in range(self.asymmrate):
+                feat.append(x)
+            if self.asymmrate > 0:
+                out = cat(feat, dim=1)
+        else:
+            out = x
+        out = self.dw_conv(out)
+        if self.use_se:
+            out = self.se(out)
+        out = self.pw_conv_linear(out)
+        if self.use_short_cut_conv:
+            return x + out
+        return out
+
+    def _get_pad(self, kernel_size):
+        if kernel_size == 1:
+            return 0
+        elif kernel_size == 3:
+            return 1
+        elif kernel_size == 5:
+            return 2
+        elif kernel_size == 7:
+            return 3
+        else:
+            raise NotImplementedError
 
 
 class Bottleneck(nn.Module):
@@ -77,7 +218,7 @@ class Hourglass(nn.Module):
     def _make_residual(self, block, num_blocks, planes):
         layers = []
         for i in range(0, num_blocks):
-            layers.append(block(int(planes*block.expansion), planes))
+            layers.append(block(planes, int(planes*block.expansion), planes, kernel_size=3))
         return nn.Sequential(*layers)
 
     def _make_hour_glass(self, block, num_blocks, planes, depth):
@@ -120,7 +261,7 @@ class HourglassNet(nn.Module):
     concat = CONCAT
     perceptualRes = PERCEPTUAL_RES
 
-    def __init__(self, block, num_stacks=2, num_blocks=4, num_classes=16):
+    def __init__(self, block, AsymmBlock, num_stacks=2, num_blocks=4, num_classes=16):
         super(HourglassNet, self).__init__()
         
         self.inplanes = INPLANES  # Edit from 64
@@ -132,7 +273,7 @@ class HourglassNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_residual(block, self.inplanes, 1)
         self.layer2 = self._make_residual(block, self.inplanes, 1)
-        self.layer3 = self._make_residual(block, self.num_feats, 1)
+        self.layer3 = self._make_residual(block, self.inplanes, 1)
         self.maxpool = nn.MaxPool2d(2, stride=2)
         if HourglassNet.concat:
             self.concat1 = nn.Conv2d(2 * self.num_feats * block.expansion, int(self.num_feats * block.expansion), kernel_size=1)
@@ -141,7 +282,7 @@ class HourglassNet(nn.Module):
         ch = int(self.num_feats*block.expansion)
         hg, res, fc, score, fc_, score_ = [], [], [], [], [], []
         for i in range(num_stacks):
-            hg.append(Hourglass(block, num_blocks, self.num_feats, 4))
+            hg.append(Hourglass(AsymmBlock, num_blocks, self.num_feats, 4))
             res.append(self._make_residual(block, self.num_feats, num_blocks))
             fc.append(self._make_fc(ch, ch))
             score.append(nn.Conv2d(ch, num_classes, kernel_size=1, bias=True))
@@ -221,7 +362,7 @@ class HourglassNet(nn.Module):
 
 
 def hg(**kwargs):
-    model = HourglassNet(Bottleneck, num_stacks=kwargs['num_stacks'], num_blocks=kwargs['num_blocks'],
+    model = HourglassNet(Bottleneck, AsymmBottleneck, num_stacks=kwargs['num_stacks'], num_blocks=kwargs['num_blocks'],
                          num_classes=kwargs['num_classes'])
     return model
 
