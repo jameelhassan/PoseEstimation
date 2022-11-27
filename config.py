@@ -1,12 +1,12 @@
-INPLANES = 64   #Edit from 64 [56, 48]
-NUM_FEATS = 128  #Edit from 128 [112, 84]
+INPLANES = 64   #Edit from 64 
+NUM_FEATS = 128  #Edit from 128
 EXPANSION = 2
 SEPARABLE_ALL = False
 SEPARABLE_3x3 = False
-GHOST = False
+GHOST = True
 CONCAT = False
 PERCEPTUAL_RES = False   # Skip connection from narrowest hourglass point ie: perceptual
-PERCEPTUAL_LOSS = True # Perceptual loss between perceptuals of hourglass
+PERCEPTUAL_LOSS = False # Perceptual loss between perceptuals of hourglass
 PERCEPTUAL_SCALE = 2    # Weighing Scale of perceptual loss
 LOSS_WEIGHT = 0.7       # Weight for prediction loss when including perceptual loss
 
