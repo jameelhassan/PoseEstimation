@@ -135,7 +135,11 @@ class HourglassNet(nn.Module):
         self.layer3 = self._make_residual(block, self.num_feats, 1)
         self.maxpool = nn.MaxPool2d(2, stride=2)
         if HourglassNet.concat:
-            self.concat1 = nn.Conv2d(2 * self.num_feats * block.expansion, int(self.num_feats * block.expansion), kernel_size=1)
+            self.concat1 = nn.Sequential(
+                nn.BatchNorm2d(2 * self.num_feats * block.expansion), 
+                nn.Conv2d(2 * self.num_feats * block.expansion, int(self.num_feats * block.expansion), kernel_size=1), 
+                self.relu
+                )
 
         # build hourglass modules
         ch = int(self.num_feats*block.expansion)
@@ -211,6 +215,7 @@ class HourglassNet(nn.Module):
                     x = x + score_
                     x = torch.cat([x, fc_], dim=1)
                     x = self.concat1(x)
+
                 else:
                     x = x + fc_ + score_
         
