@@ -1,8 +1,8 @@
-INPLANES = 64   #Edit from 64
-NUM_FEATS = 128  #Edit from 128
+INPLANES = 64   #Edit from 64 [56, 48]
+NUM_FEATS = 128  #Edit from 128 [112, 84]
 EXPANSION = 2
-SEPARABLE_ALL = True
-SEPARABLE_3x3 = True
+SEPARABLE_ALL = False
+SEPARABLE_3x3 = False
 GHOST = False
 CONCAT = False
 PERCEPTUAL_RES = False   # Skip connection from narrowest hourglass point ie: perceptual

@@ -8,13 +8,13 @@ from torch.optim.rmsprop import RMSprop
 from torch.utils.data import DataLoader
 from tqdm import trange, tqdm
 from time import time
-from config import INPLANES, NUM_FEATS, MODEL_TAG, GHOST
+from config import MODEL_TAG, GHOST
 
-if GHOST:
-    from stacked_hourglass.ghostnet import hg1, hg2, hg8
-    from stacked_hourglass.predictor import HumanPosePredictor
-else:
-    from stacked_hourglass import hg1, hg2, hg8
+# if GHOST:
+#     from stacked_hourglass.ghostnet import hg1, hg2, hg8
+#     from stacked_hourglass.predictor import HumanPosePredictor
+# else:
+from stacked_hourglass import hg1, hg2, hg8
 
 from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_training_epoch, do_validation_epoch
@@ -163,7 +163,7 @@ def main(args):
         f.write(f"\nTraining time for 20 epochs- {int(h20):0>2}:{int(min20):0>2}:{int(sec20):05.2f}\n")
         f.write(f"\nTraining time - {int(hours):0>2}:{int(mins):0>2}:{int(secs):05.2f}\n")
         f.write(f"Number of parameters - {num_of_params}\n")
-        f.write(f"Model tag - {MODEL_TAG}\n") if MODEL_TAG else None
+        # f.write(f"Model tag - {MODEL_TAG}\n") if MODEL_TAG else None
         f.write(f"Validation time for {len(val_loader.dataset)} images - {int(hours_val):0>2}:{int(mins_val):0>2}:{int(secs_val):05.2f}\n")
         f.write(f"\nInference time per image - {inference_time:.2f}s\n")
         f.write(full_table)
