@@ -245,6 +245,10 @@ def hg2(pretrained=False, progress=True, num_blocks=1, num_classes=16, separable
                num_classes=num_classes, separable=separable)
 
 
+def hg3(pretrained=False, progress=True, num_blocks=1, num_classes=16, separable=False):
+    return _hg('hg3', pretrained, progress, num_stacks=3, num_blocks=num_blocks,
+               num_classes=num_classes)
+
 def hg8(pretrained=False, progress=True, num_blocks=1, num_classes=16):
     return _hg('hg8', pretrained, progress, num_stacks=8, num_blocks=num_blocks,
                num_classes=num_classes)

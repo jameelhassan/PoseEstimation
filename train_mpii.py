@@ -10,11 +10,11 @@ from tqdm import trange, tqdm
 from time import time
 from config import MODEL_TAG, GHOST
 
-# if GHOST:
-#     from stacked_hourglass.ghostnet import hg1, hg2, hg8
-#     from stacked_hourglass.predictor import HumanPosePredictor
-# else:
-from stacked_hourglass import hg1, hg2, hg8
+if GHOST:
+    from stacked_hourglass.ghostnet import hg1, hg2, hg8
+    from stacked_hourglass.predictor import HumanPosePredictor
+else:
+    from stacked_hourglass import hg1, hg2, hg3, hg8
 
 from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_training_epoch, do_validation_epoch
@@ -40,6 +40,8 @@ def main(args):
         model = hg1(pretrained=False)
     elif args.arch == 'hg2':
         model = hg2(pretrained=False, separable=args.separable)
+    elif args.arch == 'hg3':
+        model = hg3(pretrained=False, separable=args.separable)
     elif args.arch == 'hg8':
         model = hg8(pretrained=False)
     else:
@@ -178,7 +180,7 @@ if __name__ == '__main__':
 
     # Model structure
     parser.add_argument('--arch', '-a', metavar='ARCH', default='hg2',
-                        choices=['hg1', 'hg2', 'hg8', 'hg_low'],
+                        choices=['hg1', 'hg2', 'hg3', 'hg8', 'hg_low'],
                         help='model architecture')
     # Training strategy
     parser.add_argument('--input_shape', default=(256, 256), type=int, nargs='+',

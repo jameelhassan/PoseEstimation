@@ -6,8 +6,8 @@ SEPARABLE_3x3 = False
 GHOST = False
 CONCAT = False
 PERCEPTUAL_RES = False   # Skip connection from narrowest hourglass point ie: perceptual
-PERCEPTUAL_LOSS = False # Perceptual loss between perceptuals of hourglass
-PERCEPTUAL_SCALE = 1.5    # Weighing Scale of perceptual loss
+PERCEPTUAL_LOSS = True # Perceptual loss between perceptuals of hourglass
+PERCEPTUAL_SCALE = 2    # Weighing Scale of perceptual loss
 LOSS_WEIGHT = 0.7       # Weight for prediction loss when including perceptual loss
 
 if SEPARABLE_ALL:

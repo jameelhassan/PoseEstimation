@@ -5,8 +5,13 @@ import torch
 import torch.backends.cudnn
 from torch.nn import DataParallel
 from torch.utils.data import DataLoader
+from config import INPLANES, NUM_FEATS, MODEL_TAG, GHOST
 
-from stacked_hourglass import hg1, hg2, hg8
+if GHOST:
+    from stacked_hourglass.ghostnet import hg1, hg2, hg3, hg8
+    from stacked_hourglass.predictor import HumanPosePredictor
+else:
+    from stacked_hourglass import hg1, hg2, hg3, hg8
 from stacked_hourglass.datasets.mpii import Mpii, print_mpii_validation_accuracy
 from stacked_hourglass.train import do_validation_epoch
 from time import time
@@ -33,6 +38,8 @@ def main(args):
         model = hg1(pretrained=pretrained)
     elif args.arch == 'hg2':
         model = hg2(pretrained=pretrained)
+    elif args.arch == 'hg3':
+        model = hg3(pretrained=pretrained)
     elif args.arch == 'hg8':
         model = hg8(pretrained=pretrained)
     else:
@@ -60,6 +67,8 @@ def main(args):
     hours_val, rem_val = divmod(val_end - val_st, 3600)
     mins_val, secs_val = divmod(rem_val, 60)
     inference_time = (val_end - val_st)/len(val_loader.dataset)
+    num_of_params = sum(p.numel() for p in  model.parameters())
+    print(f"Number of parameters {num_of_params}")
     print(f"\nValidation time for {len(val_loader.dataset)} images - {int(hours_val):0>2}:{int(mins_val):0>2}:{int(secs_val):05.2f}")
     print(f"Inference time per image - {inference_time:.2f}s")
 
@@ -73,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--image-path', required=True, type=str,
                         help='path to MPII Human Pose images')
     parser.add_argument('--arch', metavar='ARCH', default='hg1',
-                        choices=['hg1', 'hg2', 'hg8'],
+                        choices=['hg1', 'hg2', 'hg3', 'hg8'],
                         help='model architecture')
     parser.add_argument('--model-file', default='', type=str, metavar='PATH',
                         help='path to saved model weights')
