@@ -1,10 +1,10 @@
-INPLANES = 48   #Edit from 64 
-NUM_FEATS = 84  #Edit from 128
+INPLANES = 48   #Edit from 64 for Bottleneck
+NUM_FEATS = 84  #Edit from 128 for Bottleneck
 EXPANSION = 2
-SEPARABLE_ALL = True
-SEPARABLE_3x3 = True
+SEPARABLE_ALL = True    # Separable convolutions in all layers of Bottleneck
+SEPARABLE_3x3 = True    # Only the 3x3 in the Bottleneck is replaced by separable convs (default True if All Separable)
 GHOST = False
-CONCAT = True
+CONCAT = True   # Concatenate the output of the residual block with the input instead of adding
 PERCEPTUAL_RES = True   # Skip connection from narrowest hourglass point ie: perceptual
 PERCEPTUAL_LOSS = True # Perceptual loss between perceptuals of hourglass
 PERCEPTUAL_SCALE = 2    # Weighing Scale of perceptual loss
