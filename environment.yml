@@ -1,4 +1,4 @@
-name: pytorch-stacked-hourglass
+name: hourglass
 channels:
   - pytorch
 dependencies:

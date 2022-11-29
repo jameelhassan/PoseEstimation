@@ -133,6 +133,9 @@ def main(args):
         }, predictions, is_best, checkpoint=args.checkpoint, filename="epoch20.pth.tar")
             h20, rem20 = divmod(time() - start, 3600)
             min20, sec20 = divmod(rem20, 60)
+        if (epoch + 1) ==25:
+            h25, rem25 = divmod(time() - start, 3600)
+            min25, sec25 = divmod(rem25, 60)
 
     end = time()
     hours, rem = divmod(end - start, 3600)
@@ -163,9 +166,10 @@ def main(args):
 
     with open(logfile, 'a') as f:
         f.write(f"\nTraining time for 20 epochs- {int(h20):0>2}:{int(min20):0>2}:{int(sec20):05.2f}\n")
+        f.write(f"\nTraining time for 25 epochs- {int(h25):0>2}:{int(min25):0>2}:{int(sec25):05.2f}\n")
         f.write(f"\nTraining time - {int(hours):0>2}:{int(mins):0>2}:{int(secs):05.2f}\n")
         f.write(f"Number of parameters - {num_of_params}\n")
-        # f.write(f"Model tag - {MODEL_TAG}\n") if MODEL_TAG else None
+        f.write(f"Model tag - {MODEL_TAG}\n") if MODEL_TAG else None
         f.write(f"Validation time for {len(val_loader.dataset)} images - {int(hours_val):0>2}:{int(mins_val):0>2}:{int(secs_val):05.2f}\n")
         f.write(f"\nInference time per image - {inference_time:.2f}s\n")
         f.write(full_table)
