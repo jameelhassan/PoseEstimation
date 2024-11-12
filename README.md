@@ -1,5 +1,5 @@
 # Hourglass Perception Matters
-A lightweight Stacked Hourglass Network for Human Pose Estimation [arxvi](https://arxiv.org/pdf/2302.04815)
+A lightweight Stacked Hourglass Network for Human Pose Estimation [arxiv](https://arxiv.org/pdf/2302.04815)
 
 Code based on Pytorch implementation of Stacked Hourglass paper [here](https://github.com/anibali/pytorch-stacked-hourglass)
 
